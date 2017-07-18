@@ -22,7 +22,7 @@ function scrapeRegex(elementText, storageArray, regex){
 
 request({
 	method: 'GET',
-	url: 'http://logiksource.com/'
+	url: 'http://canddi.com/'
 },function(err, response, body) {
 	if(err) return console.error(err);
 
