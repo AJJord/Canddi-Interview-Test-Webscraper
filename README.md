@@ -2,5 +2,5 @@
 Web scraper that retrieves phone numbers, email addresses and postcodes 
 
 Dependencies:
--require
--request
+  - require
+  - request
