@@ -1,5 +1,4 @@
 //Requirements
-const cheerio = require('cheerio');
 var request = require('request');
 
 //Object to store data taken from the website
