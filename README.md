@@ -8,6 +8,7 @@ Web scraper that retrieves phone numbers, email addresses and postcodes from web
 ## Dependencies:
  - require
  - request
+ - fs
 
 ## Planned additional features:
 - Full address scraping (rather than just postcode)
