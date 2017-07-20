@@ -1,7 +1,7 @@
 # Canddi-Interview-Test-Webscraper
 Author: Alexander Jordan
 
-version: 3
+version: 4
 
 Web scraper that retrieves phone numbers, email addresses and postcodes from website pages
 
@@ -12,11 +12,12 @@ Web scraper that retrieves phone numbers, email addresses and postcodes from web
  - readline
  - cheerio
 
-## Planned additional features:
-- Identify 'contact detail pages' to look for additional information
-- look for 'team pages' for employee linkedin/social media profiles 
-
 ## Change log:
+### v4
+- Improved twitter profile link scraping using twitter username limitations.
+- Moved 'plain text' scraping stage into genericDataSearch function.
+- Added functionality that searches for 'contact us' and 'meet the team' pages and scrapes data from them.
+
 ### v3
 - Dependencies added: readline, cheerio.
 - Added full address scraping, not perfect but can handle simple cases.
