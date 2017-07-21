@@ -1,7 +1,7 @@
 # Canddi-Interview-Test-Webscraper
 Author: Alexander Jordan
 
-version: 4
+version: 5
 
 Web scraper that retrieves phone numbers, email addresses and postcodes from website pages
 
@@ -13,6 +13,13 @@ Web scraper that retrieves phone numbers, email addresses and postcodes from web
  - cheerio
 
 ## Change log:
+### v5
+- Made information output more visually appealing.
+- Added scraping for a website's about page to get a company description.
+- Added paragraph tag scraping.
+- Fixed bug where urls were being incorrectly validated
+- Reworked reqHref function and scraping functions
+
 ### v4
 - Improved twitter profile link scraping using twitter username limitations.
 - Moved 'plain text' scraping stage into genericDataSearch function.
