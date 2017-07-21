@@ -7,16 +7,15 @@ const cheerio = require('cheerio');
 /*~~~Global Variables~~~*/
 //Get regexs used for searching webpage from the json file
 var regexpress = JSON.parse(fs.readFileSync('scraperRegexs.json'));
-var urlRegExp = /[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/ig;
+const urlRegExp = /[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/i;
 //Object to store data taken from the website
 var InfoObj = {};
 //Generate object using regexpress object
 for (let key in regexpress){
 	InfoObj[key] =[];
 }
-
-
-
+//Array to store data from about page
+var aboutInfo = [];
 
 /*~~~Functions~~~*/
 /*
@@ -35,47 +34,84 @@ function scrapeRegex(elementText, storageArray, regex){
 
 /*
 Summary:   Generic data collecting function for a request. Won't look for other pages, focuses purely getting data.
-Arguments: Text to collect data from
+Arguments: Text to collect data from | object of arrays to store to
 */
-function genericDataSearch(body){
+function genericDataSearch(body,storageObj){
 	//Scrape info for each key in infoObj
 	//Perform a pass with plain html
-	for (let key in InfoObj) scrapeRegex(body,InfoObj[key],new RegExp(regexpress[key][0],regexpress[key][1]));
+	for (let key in storageObj) scrapeRegex(body,storageObj[key],new RegExp(regexpress[key][0],regexpress[key][1]));
 	//perform a pass with visible text extracted by cheerio
 	let $c = cheerio.load(body);
 	$c('body').each(function(){
 		let tagText = $c(this).text();
-		for (let key in InfoObj) scrapeRegex(tagText,InfoObj[key],new RegExp(regexpress[key][0],regexpress[key][1]));
+		for (let key in storageObj) scrapeRegex(tagText,storageObj[key],new RegExp(regexpress[key][0],regexpress[key][1]));
+	});
+}
+
+/*
+Summary:   Function for scraping paragraphs from pages (about us pages etc.)
+Arguments: The text to scrape | Array to store paragraphs
+*/
+function paragraphScrape(body,storageArray){
+	let $p = cheerio.load(body);
+	$p('p').each(function(){
+		let paraText = $p(this).text();
+		if(!storageArray.includes(paraText)) storageArray.push(paraText);
 	});
 }
 
 /*
 Summary:   Takes a link scraped from a href attribute, formats it and makes a request to find more information.
-Arguments: The scraped href value | the root URL of the site incase a relatve link is given
+Arguments: The scraped href value | the root URL of the site incase a relatve link is given | Function to use when scraping | where to store scraped info
 */
-function reqHref(hrefVal, rootURL){
-	if (!urlRegExp.test(hrefVal)){//Tests if a relative link is given (eg. /contact/)
-		hrefVal.startsWith('/')        //ternary if statement
-			? 'no / needs to be added' //True result
-			: (hrefVal = '/'+hrefVal); //False result
+function reqHref(hrefVal, rootURL,scrapeFunc,storage){
+	//Test if a relative link is given (eg. /contact/)
+	if (!urlRegExp.test(hrefVal)){
+		if (!hrefVal.startsWith('/')) hrefVal = '/'+hrefVal;
 		hrefVal = rootURL + hrefVal;
 	}
-	request(hrefVal, function(hreferr, hrefresponse, hrefbody){//get contact page
+	//get page
+	request(hrefVal, function(hreferr, hrefresponse, hrefbody){
 		if(hreferr) return console.error(hreferr);
 		console.log(hrefVal,' Accessed.');
-		genericDataSearch(hrefbody);
+		scrapeFunc(hrefbody,storage);
 	});
 }
 
+/*
+Summary:   Prints array elements to console one per line.
+Arguments: Array to be printed | string to prefix array
+*/
+function arrayPrint(arrayobj){
+	for(let elmnt in arrayobj){
+		console.log(arrayobj[elmnt]);
+	}
+}
+
+/*
+Summary:   Prints a InfoObject in a more visually appealing way.
+*/
+function InfoObjPrint(infobj){
+	console.log("\nInformation found{")
+	for (let key in infobj){
+		if (InfoObj[key].length) {
+			console.log(key,":")
+			arrayPrint(infobj[key]);
+			console.log("")
+		}
+	}
+	console.log("}")
+}
+
 /*~~~Page request and scraping~~~*/
-//Get email address
+//Set up readline
 const rl = readline.createInterface({
 	input: process.stdin,
 	output: process.stdout
 });
-
-var email = "example@canddi.com";//Set default value
-
+//Set default email value
+var email = "example@canddi.com";
+//Get email address
 rl.question('Enter an email address (default {0}): '.replace('{0}', email), function (answer){
 	if (answer.trim() != ""){//if input given
 		email = answer;
@@ -89,24 +125,28 @@ rl.question('Enter an email address (default {0}): '.replace('{0}', email), func
 	}
 	rl.close();
 
-	//Extract web address from email and format
+	//Extract web address from email and format it
 	const website = 'http://www.' + email.split('@')[1];
 
-	request(website,function (err, response, body){
-		if(err) return console.error(err);
+		request(website,function (err, response, body){
+			/*if(err) return */console.log("Status:",response.statusCode);
 
-		//Scrape website
-		genericDataSearch(body);
+			//Scrape homepage
+			genericDataSearch(body);
 
-		const $ = cheerio.load(body);
-		//Search links for..
-		$('a').each(function (){
-			//Scrape links that have text containing contact or team
-			if (/(contact|team)/gi.test($(this).text())) reqHref($(this).attr('href').trim(),website);
+			const $ = cheerio.load(body);
+			//Search links for additional pages to access
+			$('a').each(function (){
+				//Scrape links that have text containing contact or team
+				if (/(contact|team)/i.test($(this).text())) reqHref($(this).attr('href').trim(),website,genericDataSearch,InfoObj);
+				//Scrape about pages
+				if(/(about)/i.test($(this).text())) reqHref($(this).attr('href').trim(),website,paragraphScrape,aboutInfo);
+			});
 		});
-	});
 });
 
+//Print data found on exit
 process.on('exit', (code)=>{
-	console.log(InfoObj)
+	InfoObj['about'] = aboutInfo;
+	InfoObjPrint(InfoObj);
 });
